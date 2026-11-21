@@ -1,0 +1,45 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Download Xray-core
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip" -OutFile xray.zip
+          Expand-Archive xray.zip -DestinationPath xray_tmp
+          Copy-Item xray_tmp\xray.exe .\xray.exe
+          Copy-Item xray_tmp\geoip.dat .\geoip.dat -ErrorAction SilentlyContinue
+          Copy-Item xray_tmp\geosite.dat .\geosite.dat -ErrorAction SilentlyContinue
+
+      - name: Build
+        run: pyinstaller --onefile --noconsole --name PersonalProxy personal_proxy.py
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release
+          Copy-Item dist\PersonalProxy.exe release\
+          Copy-Item xray.exe release\
+          Copy-Item geoip.dat release\ -ErrorAction SilentlyContinue
+          Copy-Item geosite.dat release\ -ErrorAction SilentlyContinue
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PersonalProxy-Windows
+          path: release/
