@@ -1,0 +1,28 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pyinstaller
+      - name: Download Xray-core
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip" -OutFile xray.zip
+          Expand-Archive xray.zip -DestinationPath xray_tmp
+          New-Item -ItemType Directory -Path release
+          Copy-Item xray_tmp\* release\ -Recurse
+      - run: pyinstaller --onefile --noconsole --name PersonalProxy personal_proxy.py
+      - run: Copy-Item dist\PersonalProxy.exe release\
+        shell: pwsh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PersonalProxy-Windows
+          path: release/
